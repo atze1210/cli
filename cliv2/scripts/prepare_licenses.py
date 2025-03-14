@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
-import requests
 import re
+from security import safe_requests
 
 def manual_license_download(url, package_name):
     folder_path = os.path.join(".", "internal", "embedded", "_data", "licenses", package_name)
@@ -9,7 +9,7 @@ def manual_license_download(url, package_name):
 
     if not os.path.exists(license_file_name):
         os.makedirs(folder_path, exist_ok=True)
-        with requests.get(url, stream=True, allow_redirects=True) as response:
+        with safe_requests.get(url, stream=True, allow_redirects=True) as response:
             response.raise_for_status()
             with open(license_file_name, "wb") as license_file:
                 for chunk in response.iter_content(chunk_size=8192):
