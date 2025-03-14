@@ -6,6 +6,7 @@ import platform
 import time
 
 import requests
+from security import safe_requests
 
 primary_url = "https://downloads.snyk.io"
 secondary_url = "https://static.snyk.io"
@@ -64,10 +65,10 @@ def download_snyk_cli(download_version, base_url):
     print(f"Downloading '{filename}' from: {url}")
 
     try:
-        response = requests.get(url)
+        response = safe_requests.get(url)
 
         if response.status_code == 200:
-            sha_response = requests.get(url + ".sha256")
+            sha_response = safe_requests.get(url + ".sha256")
             if not sha_response:
                 print("SHA256 checksum not available. Aborting download.")
                 return abort
