@@ -90,9 +90,10 @@ describe('snyk sbom (mocked server only)', () => {
 
   test('`sbom` is written to a file - CycloneDX 1.4', async () => {
     const project = await createProjectFromWorkspace('npm-package');
+    const file = project.path() + '/not-existing/sbom.json';
 
     const { code } = await runSnykCLI(
-      `sbom --org aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee --format cyclonedx1.4+json --debug --json-file-output sbom.json`,
+      `sbom --org aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee --format cyclonedx1.4+json --debug --json-file-output ${file}`,
       {
         cwd: project.path(),
         env,
@@ -101,10 +102,7 @@ describe('snyk sbom (mocked server only)', () => {
 
     expect(code).toEqual(0);
 
-    const sbomFileContent = fs.readFileSync(
-      project.path() + '/sbom.json',
-      'utf8',
-    );
+    const sbomFileContent = fs.readFileSync(file, 'utf8');
     const bom = JSON.parse(sbomFileContent);
     expect(bom.metadata.tools).toEqual(
       expect.arrayContaining([
@@ -211,9 +209,9 @@ describe('snyk sbom (mocked server only)', () => {
     );
 
     expect(code).toBe(3);
-    expect(stdout).toContainText('SNYK-CLI-0000');
+    expect(stdout).toContainText('SNYK-CLI-0011');
     expect(stdout).toContainText('Could not detect supported target files');
-    expect(stderr).toContainText('SNYK-CLI-0000');
+    expect(stderr).toContainText('SNYK-CLI-0011');
     expect(stderr).toContainText('Could not detect supported target files');
   });
 });
