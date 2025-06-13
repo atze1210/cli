@@ -13,17 +13,25 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/snyk/cli/cliv2/internal/cliv2"
-	"github.com/snyk/cli/cliv2/internal/utils"
 	"github.com/snyk/error-catalog-golang-public/snyk_errors"
 	"github.com/snyk/go-application-framework/pkg/auth"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/local_workflows/config_utils"
+	"github.com/snyk/go-application-framework/pkg/networking/middleware"
+
+	"github.com/snyk/cli/cliv2/internal/cliv2"
+	"github.com/snyk/cli/cliv2/internal/utils"
 
 	localworkflows "github.com/snyk/go-application-framework/pkg/local_workflows"
 	"github.com/snyk/go-application-framework/pkg/networking"
 	"github.com/snyk/go-application-framework/pkg/networking/fips"
 )
+
+func redactAuthorizationTokens(token string) string {
+	temp := sha256.Sum256([]byte(token))
+	tokenShaSum := fmt.Sprintf("%s***%s", hex.EncodeToString(temp[0:4]), hex.EncodeToString(temp[12:16]))
+	return tokenShaSum
+}
 
 func logHeaderAuthorizationInfo(
 	config configuration.Configuration,
@@ -47,8 +55,10 @@ func logHeaderAuthorizationInfo(
 	if len(splitHeader) == 2 {
 		tokenType := splitHeader[0]
 		token := splitHeader[1]
-		temp := sha256.Sum256([]byte(token))
-		tokenShaSum = hex.EncodeToString(temp[0:16]) + "[...]"
+		if tokenType == string(auth.AUTH_TYPE_TOKEN) && auth.IsAuthTypePAT(token) {
+			tokenType = string(auth.AUTH_TYPE_PAT)
+		}
+		tokenShaSum = redactAuthorizationTokens(token)
 		tokenDetails = fmt.Sprintf(" (type=%s)", tokenType)
 	}
 
@@ -56,9 +66,8 @@ func logHeaderAuthorizationInfo(
 		oauthEnabled = "Enabled"
 		token, err := auth.GetOAuthToken(config)
 		if token != nil && err == nil {
+			tokenShaSum = redactAuthorizationTokens(token.AccessToken)
 			tokenDetails = fmt.Sprintf(" (type=oauth; expiry=%v)", token.Expiry.UTC())
-			temp := sha256.Sum256([]byte(token.AccessToken))
-			tokenShaSum = hex.EncodeToString(temp[0:16]) + "[...]"
 		}
 	}
 
@@ -112,6 +121,16 @@ func writeLogHeader(config configuration.Configuration, networkAccess networking
 		previewFeaturesEnabled = "enabled"
 	}
 
+	cacheEnabled := "disabled"
+	if !config.GetBool(configuration.CONFIG_CACHE_DISABLED) {
+		ttl := config.GetDuration(configuration.CONFIG_CACHE_TTL)
+		ttlString := "(ttl=no expiration)"
+		if ttl > 0 {
+			ttlString = fmt.Sprintf(" (ttl=%v)", ttl)
+		}
+		cacheEnabled = fmt.Sprintf("enabled %s", ttlString)
+	}
+
 	fipsEnabled := getFipsStatus(config)
 
 	tablePrint("Version", cliv2.GetFullVersion()+" "+buildType)
@@ -132,6 +151,8 @@ func writeLogHeader(config configuration.Configuration, networkAccess networking
 	tablePrint("Features", "")
 	tablePrint("  preview", previewFeaturesEnabled)
 	tablePrint("  fips", fipsEnabled)
+	tablePrint("  request attempts", fmt.Sprintf("%d", config.GetInt(middleware.ConfigurationKeyRetryAttempts)))
+	tablePrint("  config cache", cacheEnabled)
 	tablePrint("Checks", "")
 
 	sanityCheckResults := config_utils.CheckSanity(config)

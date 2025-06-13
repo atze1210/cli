@@ -243,6 +243,10 @@ describe('`snyk test` of basic projects for each language/ecosystem', () => {
       fixture: 'nuget-app-8-with-multi-project and spaces',
       targetFile: 'dotnet_8_first.csproj',
     },
+    {
+      fixture: 'nuget-app-9-globaljson',
+      targetFile: 'dotnet_9.csproj',
+    },
   ])(
     'run `snyk test` on a nuget project using v2 dotnet runtime resolution logic for $fixture',
     async ({ fixture, targetFile }) => {
@@ -508,6 +512,20 @@ describe('`snyk test` of basic projects for each language/ecosystem', () => {
       cwd: project.path(),
       env,
     });
+
+    expect(code).toEqual(0);
+  });
+
+  test('run `snyk test` on an npm project with lockfile', async () => {
+    const project = await createProjectFromFixture('npm-bundled-dep');
+
+    const { code, stdout } = await runSnykCLI('test -d', {
+      cwd: project.path(),
+      env,
+    });
+
+    expect(stdout).toMatch('Target file:       package-lock.json');
+    expect(stdout).toMatch('Package manager:   npm');
 
     expect(code).toEqual(0);
   });

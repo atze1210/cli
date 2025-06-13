@@ -4,6 +4,10 @@ import { matchers } from 'jest-json-schema';
 import { resolve } from 'path';
 import { existsSync, unlinkSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import { runCommand } from '../../util/runCommand';
+import * as fs from 'fs-extra';
+import { makeTmpDirectory } from '../../../utils';
+import * as crypto from 'crypto';
 
 expect.extend(matchers);
 jest.setTimeout(1000 * 120);
@@ -65,20 +69,35 @@ function checkSarif(file: string, expectedIgnoredFindings: number): any {
   return sarifOutput;
 }
 
+async function ensureUniqueBundleIsUsed(path: string): Promise<string> {
+  const newPath = await makeTmpDirectory();
+  try {
+    fs.copySync(path, newPath, { recursive: true });
+  } catch (error) {
+    console.error(`Error copying directory from ${path} to ${newPath}:`, error);
+    throw error; // Re-throw to fail the test clearly
+  }
+
+  // add a random file to ensure a new bundle is created
+  const randomBytes: Buffer = crypto.randomBytes(100);
+  fs.writeFileSync(`${newPath}/tmp.java`, randomBytes, { encoding: 'binary' });
+  return newPath;
+}
+
 const userJourneyWorkflows: Workflow[] = [
   {
     type: 'typescript',
     env: {
       // force use of legacy implementation
       INTERNAL_SNYK_CODE_IGNORES_ENABLED: 'false',
-      INTERNAL_SNYK_CODE_IGNORES_REPORT_ENABLED: 'false',
+      INTERNAL_SNYK_CODE_NATIVE_IMPLEMENTATION: 'false',
       SNYK_CFG_ORG: process.env.TEST_SNYK_ORG_SLUGNAME,
     },
   },
   {
     type: 'golang/native',
     env: {
-      INTERNAL_SNYK_CODE_IGNORES_REPORT_ENABLED: 'true',
+      INTERNAL_SNYK_CODE_NATIVE_IMPLEMENTATION: 'true',
       SNYK_CFG_ORG: process.env.TEST_SNYK_ORG_SLUGNAME,
     },
   },
@@ -98,13 +117,12 @@ describe('snyk code test', () => {
     'user journey',
     ({ type, env: integrationEnv }) => {
       describe(`${type} workflow`, () => {
-        jest.setTimeout(60000);
-
         describe('snyk code flag options', () => {
           it('works with --remote-repo-url', async () => {
             const expectedCodeSecurityIssues = 6;
+            const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
             const { stdout } = await runSnykCLI(
-              `code test ${projectWithCodeIssues} --remote-repo-url=https://github.com/snyk/cli.git --json`,
+              `code test ${path} --remote-repo-url=https://github.com/snyk/cli.git --json -d`,
               {
                 env: {
                   ...process.env,
@@ -122,8 +140,9 @@ describe('snyk code test', () => {
 
           it('works with --severity-threshold', async () => {
             const expectedHighCodeSecurityIssues = 5;
+            const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
             const { stdout } = await runSnykCLI(
-              `code test ${projectWithCodeIssues} --json --severity-threshold=high`,
+              `code test ${path} --json --severity-threshold=high`,
               {
                 env: {
                   ...process.env,
@@ -144,8 +163,12 @@ describe('snyk code test', () => {
               const MADE_UP_ORG_WITH_NO_SNYK_CODE_PERMISSIONS =
                 'madeUpOrgWithNoSnykCodePermissions';
 
+              const path = await ensureUniqueBundleIsUsed(
+                projectWithCodeIssues,
+              );
+
               const { stdout, code } = await runSnykCLI(
-                `code test ${projectWithCodeIssues} --org=${MADE_UP_ORG_WITH_NO_SNYK_CODE_PERMISSIONS}`,
+                `code test ${path} --org=${MADE_UP_ORG_WITH_NO_SNYK_CODE_PERMISSIONS}`,
                 {
                   env: {
                     ...process.env,
@@ -168,7 +191,9 @@ describe('snyk code test', () => {
             'sast/shallow_sast_webgoat',
           );
 
-          const { stderr, code } = await runSnykCLI(`code test ${path()}`, {
+          const tmpPath = await ensureUniqueBundleIsUsed(path());
+
+          const { stderr, code } = await runSnykCLI(`code test ${tmpPath}`, {
             env: {
               ...process.env,
               ...integrationEnv,
@@ -185,15 +210,14 @@ describe('snyk code test', () => {
             'test/fixtures/sast/no-vulnerabilities',
           );
 
-          const { stderr, code } = await runSnykCLI(
-            `code test ${noVulnsProject}`,
-            {
-              env: {
-                ...process.env,
-                ...integrationEnv,
-              },
+          const path = await ensureUniqueBundleIsUsed(noVulnsProject);
+
+          const { stderr, code } = await runSnykCLI(`code test ${path}`, {
+            env: {
+              ...process.env,
+              ...integrationEnv,
             },
-          );
+          });
 
           expect(stderr).toBe('');
           expect(code).toBe(EXIT_CODE_SUCCESS);
@@ -202,15 +226,14 @@ describe('snyk code test', () => {
         it('should not include code quality issues in results', async () => {
           // expected Code Quality Issues: 2 -  2 [Medium]
           const expectedCodeSecurityIssues = 6;
-          const { stdout } = await runSnykCLI(
-            `code test ${projectWithCodeIssues} --json`,
-            {
-              env: {
-                ...process.env,
-                ...integrationEnv,
-              },
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
+
+          const { stdout } = await runSnykCLI(`code test ${path} --json`, {
+            env: {
+              ...process.env,
+              ...integrationEnv,
             },
-          );
+          });
 
           const actualCodeSecurityIssues =
             JSON.parse(stdout)?.runs[0]?.results?.length;
@@ -249,8 +272,9 @@ describe('snyk code test', () => {
         });
 
         it('works with --json', async () => {
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
           const { stdout, stderr, code } = await runSnykCLI(
-            `code test ${projectWithCodeIssues} --json`,
+            `code test ${path} --json`,
             {
               env: {
                 ...process.env,
@@ -265,8 +289,9 @@ describe('snyk code test', () => {
         });
 
         it('works with --sarif', async () => {
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
           const { stdout, stderr, code } = await runSnykCLI(
-            `code test ${projectWithCodeIssues} --sarif`,
+            `code test ${path} --sarif`,
             {
               env: {
                 ...process.env,
@@ -281,10 +306,12 @@ describe('snyk code test', () => {
         });
 
         it('works with --json-file-output', async () => {
-          const fileName = 'jsonOutput.json';
-          const filePath = `${projectRoot}/${fileName}`;
+          const filePath = `${projectRoot}/not-existing/jsonOutput.json`;
+          const htmlFilePath = `${projectRoot}/out.html`;
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
+
           const { stderr, code } = await runSnykCLI(
-            `code test ${projectWithCodeIssues} --json-file-output=${fileName}`,
+            `code test ${path} --json-file-output=${filePath}`,
             {
               env: {
                 ...process.env,
@@ -299,9 +326,21 @@ describe('snyk code test', () => {
           expect(existsSync(filePath)).toBe(true);
           expect(require(filePath)).toMatchSchema(sarifSchema);
 
+          // execute snyk-to-html for a basic compatibility check
+          const s2h = await runCommand('npx', [
+            'snyk-to-html',
+            `--input=${filePath}`,
+            `--output=${htmlFilePath}`,
+          ]);
+          expect(s2h.code).toBe(0);
+          expect(fs.readFileSync(htmlFilePath, 'utf8')).toContain(
+            'Snyk Code Report',
+          );
+
           // cleanup file
           try {
             unlinkSync(filePath);
+            unlinkSync(htmlFilePath);
           } catch (error) {
             console.error('failed to remove file.', error);
           }
@@ -310,8 +349,9 @@ describe('snyk code test', () => {
         it('works with --sarif-file-output', async () => {
           const fileName = 'sarifOutput.json';
           const filePath = `${projectRoot}/${fileName}`;
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
           const { stderr, code } = await runSnykCLI(
-            `code test ${projectWithCodeIssues} --sarif-file-output=${fileName}`,
+            `code test ${path} --sarif-file-output=${fileName}`,
             {
               env: {
                 ...process.env,
@@ -335,8 +375,9 @@ describe('snyk code test', () => {
         });
 
         it('works with human readable output', async () => {
+          const path = await ensureUniqueBundleIsUsed(projectWithCodeIssues);
           const { stdout, stderr, code } = await runSnykCLI(
-            `code test ${projectWithCodeIssues}`,
+            `code test ${path}`,
             {
               env: {
                 ...process.env,
@@ -376,10 +417,11 @@ describe('snyk code test', () => {
 
           const sarifFileName = 'sarifOutput.json';
           const sarifFilePath = `${projectRoot}/${sarifFileName}`;
+          const tempPath = await ensureUniqueBundleIsUsed(path());
 
           // Test human readable output and SARIF output
           const cliResult = await runSnykCLI(
-            `code test ${path()} --sarif-file-output=${sarifFileName}`,
+            `code test ${tempPath} --sarif-file-output=${sarifFileName}`,
             {
               env: {
                 ...process.env,
@@ -414,7 +456,7 @@ describe('snyk code test', () => {
             'test',
             '--report',
             '--project-name=cicd-user-journey-test',
-            projectWithCodeIssues,
+            await ensureUniqueBundleIsUsed(projectWithCodeIssues),
           ];
           const { stderr, code } = await runSnykCLIWithArray(args, {
             env: {
