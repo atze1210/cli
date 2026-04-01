@@ -1,6 +1,5 @@
 import requests
 import os
-import time
 import json
 
 # URL for the SEC JSON data
@@ -15,10 +14,6 @@ OUTPUT_FILE = os.path.join(DATA_FOLDER, "company_tickers_exchange.json")
 HEADERS = {
     "User-Agent": "MyAppName/1.0 (hi@WhyDRS.org)"
 }
-
-# Rate limit configuration
-MAX_REQUESTS_PER_SECOND = 10
-SLEEP_TIME = 1 / MAX_REQUESTS_PER_SECOND
 
 def download_and_process_sec_data(url, headers, output_file):
     """Download the SEC JSON data, process it, and save it."""
@@ -54,6 +49,3 @@ def download_and_process_sec_data(url, headers, output_file):
 
 # Download and process the JSON data
 download_and_process_sec_data(SEC_JSON_URL, HEADERS, OUTPUT_FILE)
-
-# Sleep to respect rate limits
-time.sleep(SLEEP_TIME)
