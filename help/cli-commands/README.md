@@ -60,6 +60,10 @@ Generates an AI-BOM and tests it against your tenant's policies, returning all r
 
 Runs a red teaming scan against AI targets and reports vulnerabilities.
 
+### [`snyk apps`](apps.md)
+
+Create and manage Snyk Apps integrations.
+
 ### [`snyk log4shell`](log4shell.md)
 
 Find Log4Shell vulnerability.
