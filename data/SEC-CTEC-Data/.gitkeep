@@ -1,0 +1,2 @@
+# This file keeps the directory tracked by git.
+# company_tickers_exchange.json will be downloaded here by the SEC_CTEC_Data workflow.
