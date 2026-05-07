@@ -123,4 +123,6 @@ with sqlite3.connect(DB_FILE_PATH) as conn:
         Incorporated_In = IFNULL(NULLIF(TRIM(Incorporated_In), ''), '')
     ''')
 
+    conn.commit()
+
 print(f"Database updated from {JSON_FILE_PATH} successfully.")
