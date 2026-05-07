@@ -1,7 +1,7 @@
-import requests
-import os
-import time
 import json
+import os
+
+import requests
 
 # URL for the SEC JSON data
 SEC_JSON_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
@@ -16,17 +16,17 @@ HEADERS = {
     "User-Agent": "MyAppName/1.0 (hi@WhyDRS.org)"
 }
 
-# Rate limit configuration
-MAX_REQUESTS_PER_SECOND = 10
-SLEEP_TIME = 1 / MAX_REQUESTS_PER_SECOND
-
 def download_and_process_sec_data(url, headers, output_file):
     """Download the SEC JSON data, process it, and save it."""
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        json_data = response.json()
+    except requests.RequestException as error:
+        raise RuntimeError(f"Failed to download SEC company ticker data from {url}") from error
+    except ValueError as error:
+        raise RuntimeError(f"SEC company ticker data from {url} is not valid JSON") from error
 
-    # Parse the JSON data
-    json_data = response.json()
     fields = json_data['fields']
     data = json_data['data']
 
@@ -50,6 +50,3 @@ def download_and_process_sec_data(url, headers, output_file):
 
 # Download and process the JSON data
 download_and_process_sec_data(SEC_JSON_URL, HEADERS, OUTPUT_FILE)
-
-# Sleep to respect rate limits
-time.sleep(SLEEP_TIME)

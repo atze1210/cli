@@ -6,9 +6,17 @@ import sqlite3
 JSON_FILE_PATH = 'data/SEC-CTEC-Data/company_tickers_exchange.json'
 DB_FILE_PATH = 'data/Issuers/Main_Database.db'
 
-# Read JSON data
-with open(JSON_FILE_PATH, 'r') as json_file:
-    sec_data = json.load(json_file)
+try:
+    with open(JSON_FILE_PATH, 'r') as json_file:
+        sec_data = json.load(json_file)
+except FileNotFoundError as error:
+    raise RuntimeError(
+        f"SEC ticker data file was not found at {JSON_FILE_PATH}",
+    ) from error
+except json.JSONDecodeError as error:
+    raise RuntimeError(
+        f"SEC ticker data file at {JSON_FILE_PATH} is not valid JSON",
+    ) from error
 
 fields = sec_data['fields']
 records = sec_data['data']
