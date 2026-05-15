@@ -23,6 +23,8 @@ cert.pem
 key.pem
 **/tsconfig.tsbuildinfo
 __outputs__
+__pycache__/
+*.pyc
 *.tgz
 /ts-binary-wrapper/LICENSE
 /ts-binary-wrapper/README.md
