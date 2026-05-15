@@ -8,6 +8,32 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parents[3]
 JSON_FILE_PATH = REPO_ROOT / "data" / "SEC-CTEC-Data" / "company_tickers_exchange.json"
 DB_FILE_PATH = REPO_ROOT / "data" / "Issuers" / "Main_Database.db"
+NORMALIZED_COLUMNS = [
+    "Exchange",
+    "Transfer_Agent",
+    "Online_Purchase",
+    "DTC_Member_Number",
+    "TA_URL",
+    "Transfer_Agent_Pct",
+    "IR_Emails",
+    "IR_Phone_Number",
+    "IR_Company_Address",
+    "IR_URL",
+    "IR_Contact_Info",
+    "Shares_Outstanding",
+    "CUSIP",
+    "Company_Info_URL",
+    "Company_Info",
+    "Full_Progress_Pct",
+    "DRS",
+    "Percent_Shares_DRSd",
+    "Submission_Received",
+    "Timestamps_UTC",
+    "Learn_More_About_DRS",
+    "Certificates_Offered",
+    "S_And_P_500",
+    "Incorporated_In",
+]
 
 
 def load_sec_data() -> dict:
@@ -34,6 +60,23 @@ def build_dataframe(sec_data: dict) -> pd.DataFrame:
     df["_name_norm"] = df["name"].str.lower()
     df = df.drop_duplicates(subset=["_cik_norm", "_ticker_norm", "_name_norm"])
     return df.drop(columns=["_cik_norm", "_ticker_norm", "_name_norm"])
+
+
+def build_normalization_query() -> str:
+    assignments = ",\n                ".join(
+        f"{column} = IFNULL(TRIM({column}), '')" for column in NORMALIZED_COLUMNS
+    )
+    where_clause = "\n                OR ".join(
+        f"{column} IS NULL OR {column} != IFNULL(TRIM({column}), '')"
+        for column in NORMALIZED_COLUMNS
+    )
+    return f"""
+            UPDATE Main_Database
+            SET
+                {assignments}
+            WHERE
+                {where_clause}
+            """
 
 
 def main() -> None:
@@ -128,38 +171,7 @@ def main() -> None:
                     (cik_value, ticker_value, exchange_value, company_name_issuer_value),
                 )
 
-        cursor.execute(
-            """
-            UPDATE Main_Database
-            SET
-                Exchange = IFNULL(TRIM(Exchange), ''),
-                Transfer_Agent = IFNULL(TRIM(Transfer_Agent), ''),
-                Online_Purchase = IFNULL(TRIM(Online_Purchase), ''),
-                DTC_Member_Number = IFNULL(TRIM(DTC_Member_Number), ''),
-                TA_URL = IFNULL(TRIM(TA_URL), ''),
-                Transfer_Agent_Pct = IFNULL(TRIM(Transfer_Agent_Pct), ''),
-                IR_Emails = IFNULL(TRIM(IR_Emails), ''),
-                IR_Phone_Number = IFNULL(TRIM(IR_Phone_Number), ''),
-                IR_Company_Address = IFNULL(TRIM(IR_Company_Address), ''),
-                IR_URL = IFNULL(TRIM(IR_URL), ''),
-                IR_Contact_Info = IFNULL(TRIM(IR_Contact_Info), ''),
-                Shares_Outstanding = IFNULL(TRIM(Shares_Outstanding), ''),
-                CUSIP = IFNULL(TRIM(CUSIP), ''),
-                Company_Info_URL = IFNULL(TRIM(Company_Info_URL), ''),
-                Company_Info = IFNULL(TRIM(Company_Info), ''),
-                Full_Progress_Pct = IFNULL(TRIM(Full_Progress_Pct), ''),
-                DRS = IFNULL(TRIM(DRS), ''),
-                Percent_Shares_DRSd = IFNULL(TRIM(Percent_Shares_DRSd), ''),
-                Submission_Received = IFNULL(TRIM(Submission_Received), ''),
-                Timestamps_UTC = IFNULL(TRIM(Timestamps_UTC), ''),
-                Learn_More_About_DRS = IFNULL(TRIM(Learn_More_About_DRS), ''),
-                Certificates_Offered = IFNULL(TRIM(Certificates_Offered), ''),
-                S_And_P_500 = IFNULL(TRIM(S_And_P_500), ''),
-                Incorporated_In = IFNULL(TRIM(Incorporated_In), '')
-            """,
-        )
-
-        cursor.close()
+        cursor.execute(build_normalization_query())
 
     print(f"Database updated from {JSON_FILE_PATH} successfully.")
 
