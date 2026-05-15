@@ -34,7 +34,7 @@ df["name"] = df["name"].astype(str).str.strip()
 
 # Deduplicate case-insensitively on primary key columns to prevent duplicate ID
 # issues when inserting into the database. Two rows that differ only in
-# capitalisation would violate the (CIK, Ticker, Company_Name_Issuer) PRIMARY KEY.
+# capitalization would violate the (CIK, Ticker, Company_Name_Issuer) PRIMARY KEY.
 df["_cik_norm"] = df["cik"].str.lower()
 df["_ticker_norm"] = df["ticker"].str.lower()
 df["_name_norm"] = df["name"].str.lower()
@@ -109,7 +109,7 @@ for _, row in df.iterrows():
     # Attempt to UPDATE an existing row using case-insensitive matching.
     # Using MIN(rowid) ensures at most one row is updated, avoiding duplicate
     # primary key errors when the same company was previously stored with
-    # inconsistent capitalisation.
+# inconsistent capitalization.
     cursor.execute(
         """
         UPDATE Main_Database
