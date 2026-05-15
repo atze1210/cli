@@ -100,11 +100,11 @@ cursor.execute(
 # The UPDATE targets a single row by rowid to prevent PRIMARY KEY constraint
 # violations that would occur if multiple rows matched the case-insensitive
 # WHERE clause and were updated to the same canonical Company_Name_Issuer value.
-for _, row in df.iterrows():
-    cik_value = row["cik"]
-    ticker_value = row["ticker"]
-    exchange_value = row["exchange"]
-    company_name_issuer_value = row["name"]
+for row in df.itertuples(index=False):
+    cik_value = row.cik
+    ticker_value = row.ticker
+    exchange_value = row.exchange
+    company_name_issuer_value = row.name
 
     # Attempt to UPDATE an existing row using case-insensitive matching.
     # Using MIN(rowid) ensures at most one row is updated, avoiding duplicate
