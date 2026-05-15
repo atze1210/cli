@@ -27,14 +27,16 @@ def download_and_process_sec_data(url, headers, output_file):
     json_data = response.json()
     fields = json_data["fields"]
     data = json_data["data"]
+    field_indexes = {field: index for index, field in enumerate(fields)}
 
     # Process each entry to strip whitespace from CIK, name, and Ticker
     processed_data = []
     for entry in data:
         processed_entry = entry.copy()
-        processed_entry[0] = str(processed_entry[0]).strip()
-        processed_entry[1] = str(processed_entry[1]).strip()
-        processed_entry[2] = str(processed_entry[2]).strip()
+        for field_name in ("cik", "name", "ticker"):
+            field_index = field_indexes.get(field_name)
+            if field_index is not None:
+                processed_entry[field_index] = str(processed_entry[field_index]).strip()
         processed_data.append(processed_entry)
 
     # Save the processed data with both fields and data

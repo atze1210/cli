@@ -109,7 +109,7 @@ for _, row in df.iterrows():
     # Attempt to UPDATE an existing row using case-insensitive matching.
     # Using MIN(rowid) ensures at most one row is updated, avoiding duplicate
     # primary key errors when the same company was previously stored with
-# inconsistent capitalization.
+    # inconsistent capitalization.
     cursor.execute(
         """
         UPDATE Main_Database
