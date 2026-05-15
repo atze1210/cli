@@ -90,11 +90,11 @@ def main() -> None:
         """,
     )
 
-    for _, row in df.iterrows():
-        cik_value = row["cik"]
-        ticker_value = row["ticker"]
-        exchange_value = row["exchange"]
-        company_name_issuer_value = row["name"]
+    for row in df.itertuples(index=False):
+        cik_value = row.cik
+        ticker_value = row.ticker
+        exchange_value = row.exchange
+        company_name_issuer_value = row.name
 
         cursor.execute(
             """

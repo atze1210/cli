@@ -39,7 +39,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/SEC-CTEC-Data/company_tickers_exchange.json data/Issuers/Main_Database.db
-          git commit -m "Updated database with SEC data (CIK, Ticker, CompanyNameIssuer)" || echo "No changes to commit."
+          git commit -m "Updated database with SEC data (CIK, Ticker, Company_Name_Issuer)" || echo "No changes to commit."
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

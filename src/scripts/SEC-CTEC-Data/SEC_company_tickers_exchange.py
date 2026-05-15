@@ -8,6 +8,9 @@ SEC_JSON_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
 HEADERS = {"User-Agent": "MyAppName/1.0 (hi@WhyDRS.org)"}
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_FILE = REPO_ROOT / "data" / "SEC-CTEC-Data" / "company_tickers_exchange.json"
+CIK_INDEX = 0
+NAME_INDEX = 1
+TICKER_INDEX = 2
 
 
 def download_and_process_sec_data() -> None:
@@ -26,9 +29,9 @@ def download_and_process_sec_data() -> None:
     processed_data = []
     for entry in data:
         processed_entry = entry.copy()
-        processed_entry[0] = str(processed_entry[0]).strip()
-        processed_entry[1] = str(processed_entry[1]).strip()
-        processed_entry[2] = str(processed_entry[2]).strip()
+        processed_entry[CIK_INDEX] = str(processed_entry[CIK_INDEX]).strip()
+        processed_entry[NAME_INDEX] = str(processed_entry[NAME_INDEX]).strip()
+        processed_entry[TICKER_INDEX] = str(processed_entry[TICKER_INDEX]).strip()
         processed_data.append(processed_entry)
 
     with OUTPUT_FILE.open("w", encoding="utf-8") as file:
