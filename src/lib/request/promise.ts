@@ -46,17 +46,29 @@ export async function makeRequestRest<T>(payload: any): Promise<T> {
       if (res?.headers?.[headerSnykAuthFailed] === 'true') {
         return reject(new MissingApiTokenError());
       }
-      if (res.statusCode === 400) {
+      if (res.statusCode >= 400) {
+        const parsedBody = parseJsonBody(body);
+
         return reject({
           code: res.statusCode,
-          body: JSON.parse(body as any),
-        });
-      } else if (res.statusCode >= 401) {
-        return reject({
-          code: res.statusCode,
+          ...(parsedBody && typeof parsedBody === 'object'
+            ? { body: parsedBody, message: (parsedBody as any).message }
+            : {}),
         });
       }
       resolve(JSON.parse(body as any) as T);
     });
   });
+}
+
+function parseJsonBody(body: any): unknown {
+  if (typeof body !== 'string') {
+    return body;
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    return undefined;
+  }
 }

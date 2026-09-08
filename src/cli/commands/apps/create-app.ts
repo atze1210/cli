@@ -23,7 +23,7 @@ const debug = Debug(SNYK_APP_DEBUG);
  */
 export async function createApp(
   data: ICreateAppRequest,
-): Promise<string | void> {
+): Promise<string> {
   debug('App data', data);
   const {
     orgId,
@@ -55,6 +55,6 @@ export async function createApp(
     return handleCreateAppRes(response);
   } catch (error) {
     spinner.clearAll();
-    handleRestError(error);
+    return handleRestError(error);
   }
 }

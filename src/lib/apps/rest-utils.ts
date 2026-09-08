@@ -33,7 +33,7 @@ export function getAppsURL(
   }
 }
 
-export function handleRestError(error: any): void {
+export function handleRestError(error: any): never {
   if (error.code) {
     if (error.code === 400) {
       // Bad request
@@ -66,35 +66,37 @@ export function handleRestError(error: any): void {
  * @returns {String} Iterates over error and
  * converts them into a readible string
  */
-function errorsToDisplayString(errRes: IRestErrorResponse): string {
+function errorsToDisplayString(errRes?: IRestErrorResponse): string {
   const resString = `Uh oh! an error occurred while trying to create the Snyk App.
 Please run the command with '--debug' or '-d' to get more information`;
-  if (!errRes.errors) return resString;
-  errRes.errors.forEach((e) => {
-    let metaString = '',
-      sourceString = '';
-    if (e.meta) {
-      for (const [key, value] of Object.entries(e.meta)) {
-        metaString += `${key}: ${value}\n`;
-      }
-    }
-    if (e.source) {
-      for (const [key, value] of Object.entries(e.source)) {
-        sourceString += `${key}: ${value}\n`;
-      }
-    }
+  if (!errRes?.errors) return resString;
+  return errRes.errors
+    .map((e) => {
+      let metaString = '';
+      let sourceString = '';
 
-    const meta = metaString || '-';
-    const source = sourceString || '-';
+      if (e.meta) {
+        for (const [key, value] of Object.entries(e.meta)) {
+          metaString += `${key}: ${value}\n`;
+        }
+      }
+      if (e.source) {
+        for (const [key, value] of Object.entries(e.source)) {
+          sourceString += `${key}: ${value}\n`;
+        }
+      }
 
-    return `Uh oh! an error occured while trying to create the Snyk App.
+      const meta = metaString || '-';
+      const source = sourceString || '-';
+
+      return `Uh oh! an error occurred while trying to create the Snyk App.
 
 Error Description:\t${e.detail}
 Request Status:\t${e.status}
 Source:\t${source}
 Meta:\t${meta}`;
-  });
-  return resString;
+    })
+    .join('\n\n');
 }
 
 export function handleCreateAppRes(res: ICreateAppResponse): string {
